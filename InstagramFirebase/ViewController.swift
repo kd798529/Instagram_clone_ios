@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Firebase
 
 class ViewController: UIViewController {
     
@@ -21,9 +22,24 @@ class ViewController: UIViewController {
         tf.backgroundColor = UIColor(white: 0, alpha: 0.03)
         tf.borderStyle = .roundedRect
         tf.font = UIFont.systemFont(ofSize: 14)
+        
+        tf.addTarget(self, action: #selector(handleTextInputChange), for: .editingChanged)
         return tf
         
     }()
+    
+    @objc func handleTextInputChange() {
+        let isFormValid = emailTextField.text?.count ?? 0 > 0 && usernameTextField.text?.count ?? 0 > 0 && passwordTextField.text?.count ?? 0 > 0
+        
+        if isFormValid {
+            signUpButton.isEnabled = true
+            signUpButton.backgroundColor = UIColor.rgb(red: 17, green: 154, blue: 237)
+        } else  {
+            signUpButton.isEnabled = false
+            signUpButton.backgroundColor = UIColor.rgb(red: 149, green: 204, blue: 244)
+        }
+        
+    }
     
     let usernameTextField: UITextField = {
         let tf = UITextField()
@@ -31,6 +47,7 @@ class ViewController: UIViewController {
         tf.backgroundColor = UIColor(white: 0, alpha: 0.03)
         tf.borderStyle = .roundedRect
         tf.font = UIFont.systemFont(ofSize: 14)
+        tf.addTarget(self, action: #selector(handleTextInputChange), for: .editingChanged)
         return tf
         
     }()
@@ -42,6 +59,8 @@ class ViewController: UIViewController {
         tf.backgroundColor = UIColor(white: 0, alpha: 0.03)
         tf.borderStyle = .roundedRect
         tf.font = UIFont.systemFont(ofSize: 14)
+        tf.isSecureTextEntry = true
+        tf.addTarget(self, action: #selector(handleTextInputChange), for: .editingChanged)
         return tf
         
     }()
@@ -53,8 +72,39 @@ class ViewController: UIViewController {
         btn.layer.cornerRadius = 5
         btn.titleLabel?.font = UIFont.boldSystemFont(ofSize: 14)
         btn.setTitleColor(.white, for: .normal)
+        btn.addTarget(self, action: #selector(handleSignup), for: .touchUpInside)
+        btn.isEnabled = false
         return btn
     }()
+    
+    @objc func handleSignup() {
+        
+        guard let email = emailTextField.text, email.count > 0 else { return }
+        guard let username = usernameTextField.text, username.count > 0 else { return }
+        guard let password = passwordTextField.text, password.count > 0 else { return }
+        
+        Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+            if let err = error {
+                print("failed to create user:", err)
+                return
+            }
+            print("Sucessfully created user:", authResult?.user.uid ?? "")
+            
+            guard let uid = authResult?.user.uid else { return }
+            
+            let usernameValues = ["username": username]
+            
+            let values = [uid : usernameValues]
+            
+            Database.database().reference().child("users").updateChildValues(values) { err, ref in
+                if let err = err {
+                    print("Failed to save user info into db:", err)
+                }
+                
+                print("Sucessfully saved user info to db")
+            }
+        }
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -64,9 +114,9 @@ class ViewController: UIViewController {
         
         
         plusPhotoButton.anchor(top: view.topAnchor, paddingTop: 40, left: nil, paddingLeft: 0, right: nil, paddingRight: 0, bottom: nil, paddingBottom: 0, height: 140, width: 140)
-
+        
         plusPhotoButton.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
-
+        
         
         
         
